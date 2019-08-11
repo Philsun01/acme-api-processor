@@ -1,0 +1,89 @@
+<html>
+  <head>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.0/axios.js'></script>
+
+    <style>
+    body{
+      color: wheat;
+    }
+    a {
+      color: rgb(124, 124, 124);
+    }
+    td {
+      padding: 0.5rem;
+    }
+    </style>
+  </head>
+  <body bgcolor = rgb(124, 124, 124)>
+    <h1> Data Sorting </h1>
+      <a href="#page1">Page1</a>
+      <a href="#page2">Page2</a>
+      <a href="#page3">Page3</a>
+
+    <table id='bodyTable'>
+      <tr><th>Table head</th></tr>;
+    </table>
+
+    <script>
+      const urls =['https://acme-users-api-rev.herokuapp.com/api/companies',
+      'https://acme-users-api-rev.herokuapp.com/api/products',
+      'https://acme-users-api-rev.herokuapp.com/api/offerings']
+
+      window.location.hash = '#';
+
+      const data = {}; //Object to hold all data outside of async
+
+    const loadData = async()=>{
+      const responses = await Promise.all(urls.map(url=>axios.get(url)));
+      [data.companies, data.products, data.offerings] = responses.map(obj=>obj.data);
+      }
+
+
+    const list = document.querySelector('#bodyTable');
+    const productsInPriceRange = ()=>{
+
+    };
+    const groupedCompaniesByLetter = ()=>{};
+    const groupedCompaniesByState = ()=>{};
+    const processedOfferings = ()=>{};
+    const threeOrMoreOfferings = ()=>{};
+    const processedProducts = ()=>{};
+    const companiesByState = ()=>{};
+
+    const renderData = (data)=>{ // Generates Raw Data
+
+      //Check if data has loaded
+      if(data[0]===undefined) {
+        list.innerHTML = "Wait for Data to Load";
+        } else {
+          //Add header Keys
+          const headers = '<tr>' + Object.keys(data[0]).reduce((text,elm)=>{return text+=`<th>${elm}</th>`},'') + '</tr>';
+
+          //Add Table Data
+          const rows = data.reduce((text,obj)=>{
+            return text += `<tr>
+                          ${ Object.values(obj).reduce((text,elm)=> {
+                                  return text+= `<td>${elm}</td>`}
+                                  ,'')} </tr>`;
+          },'');
+          list.innerHTML = headers + rows;
+          }
+    };
+
+    //Run all functions here
+    loadData();
+
+    window.addEventListener("hashchange", ev =>{
+      const currentPage = window.location.hash;
+      if(currentPage === '#page1'){
+        renderData(data.companies);
+      } else if(currentPage === '#page2'){
+        renderData(data.products);
+      } else if(currentPage === '#page3'){
+        renderData(data.offerings);
+      }
+    })
+
+    </script>
+  </body>
+</html>
