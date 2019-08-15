@@ -12,77 +12,169 @@
     td {
       padding: 0.5rem;
     }
+    input {
+      width: 40px;
+    }
     </style>
   </head>
   <body bgcolor = rgb(124, 124, 124)>
     <h1> Data Sorting </h1>
-      <a href="#page1">Page1</a>
-      <a href="#page2">Page2</a>
-      <a href="#page3">Page3</a>
+      <a href="#companiesdata">Companies</a>
+      <a href="#productsdata">Products</a>
+      <a href="#offeringsdata">Offerings</a>
+
+    <table id='filters'>
+      <tr>
+        <th><form>
+              <button id="filterPrice">Filter by Price</button><br>
+              Min <input id = 'min' type = 'text' value="5">
+              Max <input id = 'max' type = 'text' value="10">
+        </form></th>
+
+      </tr>
+    </table>
 
     <table id='bodyTable'>
-      <tr><th>Table head</th></tr>;
+      <tr><th>Waiting for Data to Load</th></tr>
     </table>
 
     <script>
-      const urls =['https://acme-users-api-rev.herokuapp.com/api/companies',
-      'https://acme-users-api-rev.herokuapp.com/api/products',
-      'https://acme-users-api-rev.herokuapp.com/api/offerings']
+      const urls =[
+        'https://acme-users-api-rev.herokuapp.com/api/companies',
+        'https://acme-users-api-rev.herokuapp.com/api/products',
+        'https://acme-users-api-rev.herokuapp.com/api/offerings'
+        ]
 
       window.location.hash = '#';
 
       const data = {}; //Object to hold all data outside of async
 
-    const loadData = async()=>{
-      const responses = await Promise.all(urls.map(url=>axios.get(url)));
-      [data.companies, data.products, data.offerings] = responses.map(obj=>obj.data);
+      const loadData = async()=>{ //fetchs remote Data
+        const responses = await Promise.all(urls.map(url=>axios.get(url)));
+        [data.companies, data.products, data.offerings] = responses.map(obj=>obj.data);
+        renderData(data.companies);
+        console.log(processedProducts(data.products, data.offerings));
       }
 
+      const currentView = document.querySelector('#bodyTable');
 
-    const list = document.querySelector('#bodyTable');
-    const productsInPriceRange = ()=>{
+//----------------------Functions Below -------------------
+      const productsInPriceRange = (data, min, max)=>{
+        console.log(min);
+        console.log(max);
+        const temp = data.filter((obj)=>{
+          return obj.suggestedPrice >= min && obj.suggestedPrice <= max })
+        renderData(temp);
+        console.log(data.products);
+      };
 
-    };
-    const groupedCompaniesByLetter = ()=>{};
-    const groupedCompaniesByState = ()=>{};
-    const processedOfferings = ()=>{};
-    const threeOrMoreOfferings = ()=>{};
-    const processedProducts = ()=>{};
-    const companiesByState = ()=>{};
-
-    const renderData = (data)=>{ // Generates Raw Data
-
-      //Check if data has loaded
-      if(data[0]===undefined) {
-        list.innerHTML = "Wait for Data to Load";
-        } else {
-          //Add header Keys
-          const headers = '<tr>' + Object.keys(data[0]).reduce((text,elm)=>{return text+=`<th>${elm}</th>`},'') + '</tr>';
-
-          //Add Table Data
-          const rows = data.reduce((text,obj)=>{
-            return text += `<tr>
-                          ${ Object.values(obj).reduce((text,elm)=> {
-                                  return text+= `<td>${elm}</td>`}
-                                  ,'')} </tr>`;
-          },'');
-          list.innerHTML = headers + rows;
+      const groupedCompaniesByLetter = (companies)=>{
+        return companies.reduce((agg,company)=>{
+          if(agg[company.name[0].toLowerCase()]){
+          agg[company.name[0].toLowerCase()].push(company.name)
+          } else {
+            agg[company.name[0].toLowerCase()] = [company.name]
           }
-    };
+          return agg;
+        },{});
+      };
 
-    //Run all functions here
+      const groupedCompaniesByState = (companies)=>{
+        return companies.reduce((agg,company)=>{
+          if(agg[company.state]){
+          agg[company.state].push(company.name)
+          } else {
+            agg[company.state] = [company.name]
+          }
+          return agg;
+        },{});
+      };
+
+      const processedOfferings = (companies, products, offerings)=>{
+        return offerings.map((offer)=>{
+          return {
+                product: products.find((product)=>{
+                          return product.id===offer.productId
+                          }).name,
+
+                company: companies.find((company)=>{
+                          return company.id===offer.companyId
+                          }).name,
+
+                price: offer.price
+                  }
+        })
+      };
+
+      const threeOrMoreOfferings = (companies, offerings)=>{
+        return companies.filter((company)=>{
+          return offerings.filter((offer)=>{
+              return offer.companyId===company.id}).length >= 3;
+        }).map(company=>company.name)
+      };
+
+      const processedProducts = (products, offerings)=>{
+        return products.map((product)=>{
+          const offer_count= offerings.filter((offer)=>{
+                    return offer.productId===product.id}).length
+          return  {
+                  Name: product.name,
+                  Offers: offer_count,
+                  Avg_Price: (offerings.filter((offer)=>{
+                                          return offer.productId===product.id})
+                                       .reduce((agg,offer)=>{
+                                          return agg + offer.price },0)
+                                        /offer_count)
+                                        .toFixed(2)
+                  }
+        })
+      };
+
+//----------------------Functions Above-------------------
+
+
+      const renderData = (data)=>{
+        if(data[0]===undefined) {
+          currentView.innerHTML = "Wait for Data to Load";
+          } else {
+            const headers = '<tr>'
+                            + Object.keys(data[0]).reduce((text,elm)=>{
+                              return text+=`<th>${elm}</th>`},'')
+                            + '</tr>';
+
+            const rows = data.reduce((text,obj)=>{
+              return text += `<tr>
+                            ${ Object.values(obj).reduce((text,elm)=> {return text+= `<td>${elm}</td>`},'')} </tr>`;
+            },'');
+            currentView.innerHTML = headers + rows;
+          }
+
+      };
+
+
     loadData();
 
-    window.addEventListener("hashchange", ev =>{
-      const currentPage = window.location.hash;
-      if(currentPage === '#page1'){
+    window.addEventListener("hashchange", (ev) =>{
+      const currentPage = window.location.hash.slice(1);
+      if(currentPage === 'companiesdata')
         renderData(data.companies);
-      } else if(currentPage === '#page2'){
+      if(currentPage === 'productsdata')
         renderData(data.products);
-      } else if(currentPage === '#page3'){
+      if(currentPage === 'offeringsdata')
         renderData(data.offerings);
-      }
+      if(currentPage === 'groupedbyletter')
+        groupedCompaniesByLetter(data.companies);
+
     })
+
+    const loadButtons = ()=>{
+
+      document.querySelector("#filterPrice").addEventListener('click', ()=>{
+        const min = document.querySelector('#min').value;
+        const max = document.querySelector('#max').value;
+        productsInPriceRange(data.products,min,max)});
+    }
+    loadButtons();
 
     </script>
   </body>
